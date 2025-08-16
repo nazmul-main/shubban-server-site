@@ -1,0 +1,41 @@
+{
+  "name": "subban-server-side",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js --ignore 'node_modules/' --ignore '*.test.js'",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "echo \"No linter configured yet\"",
+    "clean": "rm -rf node_modules package-lock.json && npm install",
+    "seed:admin": "node scripts/seedAdmin.js",
+    "seed:users": "node scripts/seedUsers.js",
+    "test:auth": "node scripts/testAuth.js",
+    "admin": "node scripts/createAdmin.js",
+    "promote:admin": "node scripts/promoteToAdmin.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.11.0",
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^1.41.3",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.3.1",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.18.0",
+    "mongoose": "^8.17.0",
+    "mongoose-paginate-v2": "^1.9.1",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

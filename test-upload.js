@@ -1,55 +1,73 @@
 const FormData = require('form-data');
 const fs = require('fs');
-const path = require('path');
+const axios = require('axios');
 
-// Create a test image (1x1 pixel PNG)
-const testImageData = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
-
-// Write test image to file
-const testImagePath = path.join(__dirname, 'test-image.png');
-fs.writeFileSync(testImagePath, testImageData);
-
-console.log('🧪 Testing upload functionality...\n');
-
-// Create form data
-const formData = new FormData();
-formData.append('image', fs.createReadStream(testImagePath));
-
-// Test upload
-const testUpload = async () => {
+async function testUserCreation() {
   try {
-    const response = await fetch('http://localhost:5000/api/upload/single', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer YOUR_TOKEN_HERE' // You'll need to replace this with a valid token
-      },
-      body: formData
-    });
-
-    const data = await response.json();
+    console.log('🧪 Testing user creation with photo...');
     
-    if (response.ok) {
-      console.log('✅ Upload test successful!');
-      console.log('Response:', data);
-    } else {
-      console.log('❌ Upload test failed:');
-      console.log('Status:', response.status);
-      console.log('Response:', data);
-    }
+    // Create FormData
+    const formData = new FormData();
+    
+    // Add text fields
+    formData.append('fullName', 'Test User');
+    formData.append('email', `test${Date.now()}@test.com`);
+    formData.append('password', '123456');
+    formData.append('userRole', 'user');
+    formData.append('mobileNumber', '1234567890');
+    
+    // Add a test image (create a simple 1x1 pixel PNG)
+    const testImageBuffer = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+    formData.append('photo', testImageBuffer, {
+      filename: 'test.png',
+      contentType: 'image/png'
+    });
+    
+    console.log('📤 Sending request...');
+    
+    const response = await axios.post('http://localhost:5000/api/users', formData, {
+      headers: {
+        ...formData.getHeaders(),
+      },
+    });
+    
+    console.log('✅ Success:', response.data);
   } catch (error) {
-    console.error('❌ Upload test error:', error.message);
-  } finally {
-    // Clean up test file
-    if (fs.existsSync(testImagePath)) {
-      fs.unlinkSync(testImagePath);
+    console.error('❌ Error:', error.response?.data || error.message);
+    if (error.response) {
+      console.error('Status:', error.response.status);
+      console.error('Headers:', error.response.headers);
     }
   }
-};
+}
 
-// Note: This test requires a valid authentication token
-console.log('⚠️  Note: This test requires a valid authentication token');
-console.log('   Replace YOUR_TOKEN_HERE with a valid admin token');
-console.log('   You can get a token by logging in to the admin panel\n');
+async function testBasicUserCreation() {
+  try {
+    console.log('🧪 Testing basic user creation...');
+    
+    const response = await axios.post('http://localhost:5000/api/users/test', {
+      name: 'Test User',
+      email: `test${Date.now()}@test.com`,
+      password: '123456'
+    });
+    
+    console.log('✅ Success:', response.data);
+  } catch (error) {
+    console.error('❌ Error:', error.response?.data || error.message);
+  }
+}
 
-// Uncomment the line below to run the test
-// testUpload(); 
+// Run tests
+async function runTests() {
+  console.log('🚀 Starting tests...');
+  
+  // Test basic user creation first
+  await testBasicUserCreation();
+  
+  // Test user creation with photo
+  await testUserCreation();
+  
+  console.log('🏁 Tests completed');
+}
+
+runTests(); 

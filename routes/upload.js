@@ -57,7 +57,7 @@ router.post('/multiple', protect, uploadMultiple, asyncHandler(async (req, res) 
 }));
 
 // Upload user photo and signature
-router.post('/user-files', protect, uploadFields, asyncHandler(async (req, res) => {
+router.post('/user-files', uploadFields, asyncHandler(async (req, res) => {
   try {
     const results = {};
     

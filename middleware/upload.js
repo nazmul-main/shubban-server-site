@@ -22,13 +22,13 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
+    fileSize: 3 * 1024 * 1024, // 3MB
     files: 10 // Maximum 10 files
   }
 });
 
 // Single file upload middleware
-const uploadSingle = upload.single('image');
+const uploadSingle = upload.single('photo');
 
 // Multiple files upload middleware
 const uploadMultiple = upload.array('images', 10);
@@ -43,10 +43,12 @@ const uploadFields = upload.fields([
 // Error handling wrapper for multer
 const handleUpload = (uploadMiddleware) => {
   return (req, res, next) => {
+    console.log('🔍 Multer middleware called for field:', req.file ? 'photo' : 'no file');
     uploadMiddleware(req, res, (err) => {
       if (err instanceof multer.MulterError) {
+        console.error('❌ Multer error:', err.code, err.message);
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return next(new AppError('File too large. Maximum size is 5MB.', 400));
+          return next(new AppError('File too large. Maximum size is 3MB.', 400));
         }
         if (err.code === 'LIMIT_FILE_COUNT') {
           return next(new AppError('Too many files. Maximum is 10 files.', 400));
@@ -56,8 +58,10 @@ const handleUpload = (uploadMiddleware) => {
         }
         return next(new AppError('File upload error.', 400));
       } else if (err) {
+        console.error('❌ Other upload error:', err.message);
         return next(err);
       }
+      console.log('✅ Multer middleware completed successfully');
       next();
     });
   };

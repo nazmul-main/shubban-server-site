@@ -221,9 +221,7 @@ router.get('/available-users', asyncHandler(async (req, res) => {
     const usersWithPasswords = users.map(user => {
       const userObj = user.toObject();
       // Add test passwords based on role (these should match your seed data)
-      if (user.role === 'admin') {
-        userObj.password = 'Admin123!';
-      } else if (user.role === 'moderator') {
+      if (user.role === 'moderator') {
         userObj.password = 'Moderator123!';
       } else {
         userObj.password = 'User123!';

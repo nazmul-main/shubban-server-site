@@ -129,7 +129,7 @@ const userSchema = new mongoose.Schema({
   // System Information
   role: {
     type: String,
-    enum: ['user', 'admin', 'moderator'],
+    enum: ['user', 'moderator'],
     default: 'user'
   },
   isActive: {

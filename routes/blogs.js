@@ -55,7 +55,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 // Create new blog (protected)
-router.post('/', protect, authorize('admin', 'moderator'), asyncHandler(async (req, res) => {
+router.post('/', protect, authorize('moderator'), asyncHandler(async (req, res) => {
   const blogData = {
     ...req.body,
     author: req.user._id,
@@ -78,8 +78,8 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if user is author or admin
-  if (blog.author.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+  // Check if user is author
+  if (blog.author.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to update this blog'
@@ -106,8 +106,8 @@ router.delete('/:id', protect, asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if user is author or admin
-  if (blog.author.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+  // Check if user is author
+  if (blog.author.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to delete this blog'

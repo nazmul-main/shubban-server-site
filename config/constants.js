@@ -42,7 +42,7 @@ module.exports = {
   GALLERY_CATEGORIES: ['ইসলামিক শিক্ষা', 'সমাজ উন্নয়ন', 'দাওয়াত', 'সামাজিক সেবা', 'ইভেন্ট', 'সাধারণ'],
   
   // User Roles
-  USER_ROLES: ['user', 'admin', 'moderator'],
+  USER_ROLES: ['user', 'moderator'],
   
   // Blog Status
   BLOG_STATUS: ['draft', 'published', 'archived'],

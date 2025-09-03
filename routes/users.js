@@ -154,31 +154,124 @@ router.post('/test-public', async (req, res) => {
   }
 });
 
-// Get all users (admin only)
-router.get('/', protect, authorize(['admin']), asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, role, search } = req.query;
-  
-  const query = {};
-  if (role) query.role = role;
-  if (search) {
-    query.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
-      { phone: { $regex: search, $options: 'i' } }
-    ];
+// Public endpoint to fetch users (no auth required) - for frontend display
+router.get('/public', async (req, res) => {
+  try {
+    console.log('📥 Public users fetch request');
+    
+    // Check database connection
+    if (!User.db.readyState) {
+      console.error('❌ Database not connected');
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection error',
+        errors: { database: 'Database is not connected' }
+      });
+    }
+    
+    // Check if we want all users or paginated
+    const { all, page = 1, limit = 1000, role, search } = req.query;
+    
+    if (all === 'true') {
+      // Fetch all users without pagination for debugging
+      console.log('🔍 Fetching ALL users without pagination');
+      const allUsers = await User.find({}).select('-password -__v').sort({ createdAt: -1 });
+      console.log('🔍 Total users fetched (no pagination):', allUsers.length);
+      
+      const transformedUsers = allUsers.map(user => ({
+        id: user._id,
+        name: user.name || 'Unknown',
+        email: user.email,
+        role: user.role || 'user',
+        status: user.isActive ? 'active' : 'inactive',
+        joinDate: user.createdAt || user.applicationDate || new Date(),
+        photo: user.photo || null,
+        phone: user.phone,
+        formNumber: user.formNumber,
+        memberNumber: user.memberNumber
+      }));
+      
+      return res.json({
+        success: true,
+        message: 'All users fetched successfully',
+        data: transformedUsers,
+        total: transformedUsers.length
+      });
+    }
+    
+    // Fetch users with pagination and select only necessary fields
+    const query = {};
+    if (role && role !== 'all') query.role = role;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { createdAt: -1 },
+      select: '-password -__v' // Exclude sensitive fields
+    };
+    
+    console.log('🔍 Fetching users with query:', query);
+    console.log('🔍 Pagination options:', options);
+    
+    // First, let's check total count in database
+    const totalCount = await User.countDocuments(query);
+    console.log('🔍 Total users in database:', totalCount);
+    
+    const users = await User.paginate(query, options);
+    
+    console.log('🔍 Pagination result:', {
+      docs: users.docs.length,
+      totalDocs: users.totalDocs,
+      totalPages: users.totalPages,
+      page: users.page,
+      limit: users.limit
+    });
+    
+    // Transform the data to match frontend expectations
+    const transformedUsers = users.docs.map(user => ({
+      id: user._id,
+      name: user.name || 'Unknown',
+      email: user.email,
+      role: user.role || 'user',
+      status: user.isActive ? 'active' : 'inactive',
+      joinDate: user.createdAt || user.applicationDate || new Date(),
+      photo: user.photo || null,
+      phone: user.phone,
+      formNumber: user.formNumber,
+      memberNumber: user.memberNumber
+    }));
+    
+    console.log(`✅ Fetched ${transformedUsers.length} users`);
+    
+    return res.json({
+      success: true,
+      message: 'Users fetched successfully',
+      data: transformedUsers,
+      pagination: {
+        page: users.page,
+        limit: users.limit,
+        totalPages: users.totalPages,
+        totalDocs: users.totalDocs
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error fetching users (public endpoint):', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users',
+      errors: { general: error.message }
+    });
   }
+});
 
-  const options = {
-    page: parseInt(page),
-    limit: parseInt(limit),
-    sort: { createdAt: -1 },
-    select: '-password'
-  };
 
-  const users = await User.paginate(query, options);
-  
-  return successResponse(res, users, 'Users retrieved successfully');
-}));
 
 // Get user by ID
 router.get('/:id', protect, asyncHandler(async (req, res) => {
@@ -191,8 +284,8 @@ router.get('/:id', protect, asyncHandler(async (req, res) => {
     });
   }
 
-  // Only admins can view other users' details
-  if (req.user.role !== 'admin' && req.user._id.toString() !== req.params.id) {
+  // Users can only view their own details
+  if (req.user._id.toString() !== req.params.id) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to view this user'
@@ -216,7 +309,7 @@ router.post('/test', async (req, res) => {
         errors: { missing: 'Name, email, and password are required' }
       });
     }
-    
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -481,7 +574,7 @@ router.post('/', uploadSingle, async (req, res) => {
       }
       
       // If it's already a valid role, use it
-      if (['user', 'admin', 'moderator'].includes(inputRole)) {
+      if (['user', 'moderator'].includes(inputRole)) {
         return inputRole;
       }
       
@@ -493,7 +586,7 @@ router.post('/', uploadSingle, async (req, res) => {
     console.log('🎭 Enhanced role mapping:', {
       originalRole: cleanUserRole,
       finalRole: finalRole,
-      validRoles: ['user', 'admin', 'moderator']
+      validRoles: ['user', 'moderator']
     });
 
     // Log the exact request body for debugging
@@ -644,16 +737,8 @@ router.post('/', uploadSingle, async (req, res) => {
 router.put('/:id', protect, asyncHandler(async (req, res) => {
   const { password, role, ...updateData } = req.body;
   
-  // Only admins can change roles
-  if (role && req.user.role !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      message: 'Only admins can change user roles'
-    });
-  }
-
-  // Only admins can update other users
-  if (req.user.role !== 'admin' && req.user._id.toString() !== req.params.id) {
+  // Users can only update themselves
+  if (req.user._id.toString() !== req.params.id) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to update this user'
@@ -675,10 +760,7 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
     }
   });
 
-  // Handle role update
-  if (role && req.user.role === 'admin') {
-    user.role = role;
-  }
+
 
   // Handle password update
   if (password) {
@@ -704,67 +786,10 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
   return successResponse(res, userResponse, 'User updated successfully');
 }));
 
-// Delete user (admin only)
-router.delete('/:id', protect, authorize(['admin']), asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
-  
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      message: 'User not found'
-    });
-  }
 
-  // Prevent admin from deleting themselves
-  if (req.user._id.toString() === req.params.id) {
-    return res.status(400).json({
-      success: false,
-      message: 'Cannot delete your own account'
-    });
-  }
 
-  await User.findByIdAndDelete(req.params.id);
 
-  return successResponse(res, null, 'User deleted successfully');
-}));
 
-// Toggle user active status (admin only)
-router.patch('/:id/toggle-status', protect, authorize(['admin']), asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
-  
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      message: 'User not found'
-    });
-  }
 
-  user.isActive = !user.isActive;
-  await user.save();
-
-  return successResponse(res, { isActive: user.isActive }, 'User status updated successfully');
-}));
-
-// Get user statistics (admin only)
-router.get('/stats/overview', protect, authorize(['admin']), asyncHandler(async (req, res) => {
-  const totalUsers = await User.countDocuments();
-  const activeUsers = await User.countDocuments({ isActive: true });
-  const adminUsers = await User.countDocuments({ role: 'admin' });
-  const moderatorUsers = await User.countDocuments({ role: 'moderator' });
-  const regularUsers = await User.countDocuments({ role: 'user' });
-
-  const stats = {
-    total: totalUsers,
-    active: activeUsers,
-    inactive: totalUsers - activeUsers,
-    byRole: {
-      admin: adminUsers,
-      moderator: moderatorUsers,
-      user: regularUsers
-    }
-  };
-
-  return successResponse(res, stats, 'User statistics retrieved successfully');
-}));
 
 module.exports = router; 

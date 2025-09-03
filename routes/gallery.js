@@ -59,7 +59,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 // Upload new image (protected)
-router.post('/', protect, authorize('admin', 'moderator'), asyncHandler(async (req, res) => {
+router.post('/', protect, authorize('moderator'), asyncHandler(async (req, res) => {
   const imageData = {
     ...req.body,
     uploadedBy: req.user._id,
@@ -82,8 +82,8 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if user is uploader or admin
-  if (image.uploadedBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+  // Check if user is uploader
+  if (image.uploadedBy.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to update this image'
@@ -110,8 +110,8 @@ router.delete('/:id', protect, asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if user is uploader or admin
-  if (image.uploadedBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+  // Check if user is uploader
+  if (image.uploadedBy.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to delete this image'

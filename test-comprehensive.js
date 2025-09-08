@@ -1,6 +1,6 @@
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('./config/constants');
+const { JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD } = require('./config/constants');
 
 async function testComprehensive() {
   try {
@@ -10,8 +10,8 @@ async function testComprehensive() {
     // 1. Login as admin
     console.log('\n1️⃣ Logging in as admin...');
     const loginResponse = await axios.post('http://localhost:5000/api/auth/login', {
-      email: 'admin@shubban.org',
-      password: 'admin123'
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD
     });
     
     const { token, user } = loginResponse.data.data;

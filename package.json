@@ -10,7 +10,7 @@
     "clean": "rm -rf node_modules package-lock.json && npm install",
     "seed:admin": "node scripts/seedAdmin.js",
     "seed:users": "node scripts/seedUsers.js",
-    "test:auth": "node scripts/testAuth.js",
+    "test:auth": "node scripts/auth.js",
     "admin": "node scripts/createAdmin.js",
     "promote:admin": "node scripts/promoteToAdmin.js"
   },

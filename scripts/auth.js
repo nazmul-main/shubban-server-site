@@ -1,14 +1,15 @@
 const axios = require('axios');
 const { connectToDatabase, disconnectFromDatabase } = require('../config/database');
 const User = require('../models/User');
+const { ADMIN_EMAIL, ADMIN_PASSWORD } = require('../config/constants');
 
 const BASE_URL = 'http://localhost:5000/api';
 const ADMIN_CREDENTIALS = {
-  email: 'admin@subban.org',
-  password: 'Admin123!'
+  email: ADMIN_EMAIL,
+  password: ADMIN_PASSWORD
 };
 
-async function testAuthentication() {
+async function authentication() {
   try {
     console.log('🧪 Testing Authentication System...\n');
     
@@ -126,7 +127,7 @@ async function main() {
     return;
   }
   
-  await testAuthentication();
+  await authentication();
   
   console.log('\n🎉 Authentication tests completed!');
 }

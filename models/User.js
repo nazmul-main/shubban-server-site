@@ -129,7 +129,7 @@ const userSchema = new mongoose.Schema({
   // System Information
   role: {
     type: String,
-    enum: ['user', 'moderator'],
+    enum: ['user', 'moderator', 'admin'],
     default: 'user'
   },
   isActive: {
@@ -138,7 +138,47 @@ const userSchema = new mongoose.Schema({
   },
   lastLogin: {
     type: Date
-  }
+  },
+  
+  // Device tracking for admin
+  activeDevices: [{
+    deviceId: {
+      type: String,
+      required: true
+    },
+    deviceInfo: {
+      type: String,
+      required: true
+    },
+    loginTime: {
+      type: Date,
+      default: Date.now
+    },
+    lastActivity: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  
+  // Token tracking
+  tokens: [{
+    token: {
+      type: String,
+      required: true
+    },
+    deviceId: {
+      type: String,
+      required: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    expiresAt: {
+      type: Date,
+      required: true
+    }
+  }]
 }, {
   timestamps: true
 });

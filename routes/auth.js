@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/constants');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { protect } = require('../middleware/auth');
@@ -236,6 +237,182 @@ router.get('/available-users', asyncHandler(async (req, res) => {
       message: 'Failed to retrieve users'
     });
   }
+}));
+
+// Admin login with device tracking
+router.post('/admin-login', asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  // Check if user exists and is admin
+  const user = await User.findOne({ email, role: 'admin' });
+  if (!user) {
+    return res.status(400).json({
+      success: false,
+      message: 'অবৈধ এডমিন অ্যাকাউন্ট'
+    });
+  }
+
+  // Check password
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    return res.status(400).json({
+      success: false,
+      message: 'ভুল পাসওয়ার্ড'
+    });
+  }
+
+  // Check if user is active
+  if (!user.isActive) {
+    return res.status(400).json({
+      success: false,
+      message: 'অ্যাকাউন্ট নিষ্ক্রিয়'
+    });
+  }
+
+  // Generate device ID
+  const deviceId = crypto.randomBytes(16).toString('hex');
+  const deviceInfo = req.headers['user-agent'] || 'Unknown Device';
+
+  // Check device limit (max 3 devices for admin)
+  const maxDevices = 3;
+  if (user.activeDevices.length >= maxDevices) {
+    // Check if this is a new device
+    const isNewDevice = !user.activeDevices.some(device => 
+      device.deviceInfo === deviceInfo
+    );
+    
+    if (isNewDevice) {
+      // Remove oldest device
+      user.activeDevices.sort((a, b) => new Date(a.loginTime) - new Date(b.loginTime));
+      const removedDevice = user.activeDevices.shift();
+      
+      // Remove corresponding token
+      user.tokens = user.tokens.filter(token => token.deviceId !== removedDevice.deviceId);
+    }
+  }
+
+  // Add new device
+  user.activeDevices.push({
+    deviceId,
+    deviceInfo,
+    loginTime: new Date(),
+    lastActivity: new Date()
+  });
+
+  // Create JWT token with 2 hours expiry
+  const token = jwt.sign(
+    { 
+      userId: user._id,
+      role: user.role,
+      deviceId: deviceId
+    },
+    JWT_SECRET,
+    { expiresIn: '2h' }
+  );
+
+  // Add token to user's token list
+  const tokenExpiry = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+  user.tokens.push({
+    token,
+    deviceId,
+    createdAt: new Date(),
+    expiresAt: tokenExpiry
+  });
+
+  // Update last login
+  user.lastLogin = new Date();
+  await user.save();
+
+  // Remove password from response
+  const userResponse = user.toObject();
+  delete userResponse.password;
+  delete userResponse.tokens;
+
+  return successResponse(res, {
+    user: userResponse,
+    token,
+    deviceId
+  }, 'এডমিন লগইন সফল');
+}));
+
+// Logout user (general logout)
+router.post('/logout', protect, asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Update last logout time
+  user.lastLogout = new Date();
+  await user.save();
+
+  return successResponse(res, null, 'Logout successful');
+}));
+
+// Admin signout (remove device)
+router.post('/admin-signout', protect, asyncHandler(async (req, res) => {
+  const { deviceId } = req.body;
+  const userId = req.user._id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'ইউজার খুঁজে পাওয়া যায়নি'
+    });
+  }
+
+  // Remove device from active devices
+  user.activeDevices = user.activeDevices.filter(device => device.deviceId !== deviceId);
+  
+  // Remove token from tokens list
+  user.tokens = user.tokens.filter(token => token.deviceId !== deviceId);
+  
+  await user.save();
+
+  return successResponse(res, null, 'লগআউট সফল');
+}));
+
+// Get admin devices
+router.get('/admin-devices', protect, asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  const user = await User.findById(userId).select('activeDevices');
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'ইউজার খুঁজে পাওয়া যায়নি'
+    });
+  }
+
+  return successResponse(res, user.activeDevices, 'ডিভাইস তালিকা');
+}));
+
+// Remove specific device (admin only)
+router.delete('/admin-devices/:deviceId', protect, asyncHandler(async (req, res) => {
+  const { deviceId } = req.params;
+  const userId = req.user._id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'ইউজার খুঁজে পাওয়া যায়নি'
+    });
+  }
+
+  // Remove device
+  user.activeDevices = user.activeDevices.filter(device => device.deviceId !== deviceId);
+  user.tokens = user.tokens.filter(token => token.deviceId !== deviceId);
+  
+  await user.save();
+
+  return successResponse(res, null, 'ডিভাইস সরানো হয়েছে');
 }));
 
 module.exports = router; 

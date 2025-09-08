@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { ADMIN_EMAIL, ADMIN_PASSWORD } = require('./config/constants');
 
 async function testAdminUserCreation() {
   try {
@@ -6,8 +7,8 @@ async function testAdminUserCreation() {
     
     // 1. Login as admin
     const loginResponse = await axios.post('http://localhost:5000/api/auth/login', {
-      email: 'admin@shubban.org',
-      password: 'admin123'
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD
     });
     
     const { token } = loginResponse.data.data;

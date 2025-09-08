@@ -46,4 +46,8 @@ module.exports = {
   
   // Blog Status
   BLOG_STATUS: ['draft', 'published', 'archived'],
+  
+  // Admin Credentials
+  ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@shubban.org',
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
 }; 

@@ -1,13 +1,14 @@
 const bcrypt = require('bcryptjs');
 const { connectToDatabase, disconnectFromDatabase } = require('../config/database');
 const User = require('../models/User');
+const { ADMIN_EMAIL, ADMIN_PASSWORD } = require('../config/constants');
 
 // User data array
 const usersData = [
   {
     name: 'Admin User',
-    email: 'admin@subban.org',
-    password: 'Admin123!',
+    email: ADMIN_EMAIL,
+    password: ADMIN_PASSWORD,
     role: 'admin',
     phone: '+8801234567890',
     address: 'Dhaka, Bangladesh',
